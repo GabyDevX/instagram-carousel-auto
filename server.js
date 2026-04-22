@@ -1,4 +1,5 @@
 const express = require('express');
+// Vercel Deployment Trigger - v1.0.1
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
 const path = require('path');
