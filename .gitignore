@@ -1,0 +1,9 @@
+node_modules/
+exports/
+public/downloads/
+.DS_Store
+.env
+*.zip
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
