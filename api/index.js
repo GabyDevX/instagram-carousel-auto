@@ -1,4 +1,3 @@
-// api/index.js
 const express = require('express');
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
@@ -23,6 +22,52 @@ const EXPORTS_DIR = isVercel
 
 fs.ensureDirSync(EXPORTS_DIR);
 
+/**
+ * Launch Chromium (Vercel + local compatible)
+ */
+async function launchBrowser() {
+  if (isVercel) {
+    return await puppeteer.launch({
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox'
+      ],
+      executablePath: await chromium.executablePath(),
+      headless: true,
+      defaultViewport: {
+        width: 1080,
+        height: 1440,
+        deviceScaleFactor: 2
+      }
+    });
+  }
+
+  // Local development
+  return await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    defaultViewport: {
+      width: 1080,
+      height: 1440,
+      deviceScaleFactor: 2
+    }
+  });
+}
+
+/**
+ * Health check
+ */
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    environment: isVercel ? 'vercel' : 'local'
+  });
+});
+
+/**
+ * Generate carousel images ZIP
+ */
 app.post('/api/generate', async (req, res) => {
   const { html } = req.body;
 
@@ -40,16 +85,7 @@ app.post('/api/generate', async (req, res) => {
   let browser;
 
   try {
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: true,
-      defaultViewport: {
-        width: 1080,
-        height: 1440,
-        deviceScaleFactor: 2
-      }
-    });
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
 
@@ -70,7 +106,7 @@ app.post('/api/generate', async (req, res) => {
         }
       }, i);
 
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(resolve => setTimeout(resolve, 700));
 
       const element = await page.$('.viewport');
 
@@ -78,10 +114,14 @@ app.post('/api/generate', async (req, res) => {
         throw new Error('Missing .viewport element in HTML');
       }
 
-      const imgPath = path.join(folderPath, `slide-${i + 1}.png`);
+      const imgPath = path.join(
+        folderPath,
+        `slide-${i + 1}.png`
+      );
 
       await element.screenshot({
-        path: imgPath
+        path: imgPath,
+        type: 'png'
       });
     }
 
@@ -96,27 +136,32 @@ app.post('/api/generate', async (req, res) => {
       'Content-Length': zipBuffer.length
     });
 
-    res.send(zipBuffer);
+    return res.send(zipBuffer);
 
   } catch (error) {
-    console.error(error);
+    console.error('Generate error:', error);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: 'Failed to generate images: ' + error.message
     });
 
   } finally {
     if (browser) {
-      await browser.close();
+      try {
+        await browser.close();
+      } catch (_) {}
     }
 
     await fs.remove(folderPath).catch(() => {});
   }
 });
 
+/**
+ * Local only
+ */
 if (!isVercel) {
   app.listen(PORT, () => {
-    console.log(`Running on http://localhost:${PORT}`);
+    console.log(`🚀 Running at http://localhost:${PORT}`);
   });
 }
 
