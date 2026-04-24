@@ -9,19 +9,43 @@ This project is a high-fidelity automated system for creating Instagram carousel
 - **`api/index.js`**: An Express-based API for remote generation (compatible with Vercel).
 - **`public/`**: Frontend assets for the generator's UI.
 
+## 📢 Marketing & Brand Alignment
+
+To ensure all carousel content aligns with the **HogarCash** brand strategy, follow these core principles from the [marketing document](file:///c:/Users/gaboc/Desktop/Playground/InstagramCarousel/Generador/HOGARCASH_MARKETING.md):
+
+### 1. Brand Identity & Voice
+- **Name**: Always **HogarCash** (Home + Cash).
+- **Core Tagline**: *"Las finanzas de tu hogar, bajo control."*
+- **Tone**: Honest (no jargon), Warm (family-focused), Empowering, and Grounded (LATAM-specific).
+- **Key Focus**: Solving "The Cuota Trap", "Multi-Currency Confusion", and "Shared Household Blind Spots".
+
+### 2. Color Palette (Source of Truth)
+| Role | Hex | Name |
+|------|-----|------|
+| Primary Brand | `#00d9b1` | HogarTeal (The "soul" of the brand) |
+| Dark Background | `#070b10` | HogarDark |
+| Light Base | `#ffffff` | HogarWhite |
+| Income | `#22c55e` | IncomeGreen |
+| Expenses | `#ef4444` | ExpenseRed |
+
+### 3. Visual Language
+- **Approachable & Modern**: Use `rounded-2xl` (20px-32px radius) for all cards and containers.
+- **Depth**: Utilize glassmorphism (`backdrop-blur`) and soft shadows.
+- **Latin-American Context**: Use terms like "cuotas", "servicios", and reference both local currency (e.g., UYU, ARS) and USD.
+
 ---
 
-## 🎨 Design System
+## 🎨 Design System (Technical Specs)
 
 When generating or modifying the carousel, adhere to these standards:
 
 - **Dimensions**: 1080px width x 1440px height (4:5 ratio).
-- **Colors**:
-  - `primary`: #2d7a7a (Teal)
-  - `accent`: #c8924a (Gold)
-  - `background`: #fdf8f3 (Cream) or #1a2e2e (Dark Teal)
+- **CSS Variables**:
+  - `--teal`: `#00d9b1` (Updated from Brand Book)
+  - `--gold`: `#c8924a` (Accent)
+  - `--dark`: `#070b10` (Hero background)
 - **Typography**: 'DM Serif Display' for headlines, 'DM Sans' for body text.
-- **Visuals**: Use subtle grain overlays, smooth gradients, and rounded cards (32px+).
+- **Visuals**: Use subtle grain overlays, smooth gradients, and rounded corners (minimum 20px).
 
 ---
 
@@ -36,13 +60,12 @@ The HTML must contain:
 - Multiple `.slide` divs inside the track.
 - A `window.goTo(index)` Javascript function to navigate the track by translating the X position.
 
-### 2. Standard Slide Sequence
-1.  **Cover (Slide 1)**: Impactful headline, logo, and a "hook" subtext.
-2.  **The Hook/Problem**: Empathize with the user's pain points.
-3.  **The Solution**: Introduce the product/idea as the answer.
-4.  **Key Features**: 2-3 slides detailing how it works.
-5.  **Social Proof/Pricing**: Trust signals or plan comparisons.
-6.  **CTA (Final Slide)**: Clear "Call to Action" with handles and URLs.
+### 2. Standard Slide Sequence (Marketing-Aligned)
+1.  **The Hook (Slide 1)**: Use a bold headline addressing a real LATAM problem (e.g., *"¿Fin de mes y no sabés en qué gastaste?"*).
+2.  **The Pain Points (Slide 2)**: List specifics like "cuotas de la tarjeta", "servicios olvidados", or "falta de visión compartida".
+3.  **The Solution (Slide 3)**: Introduce HogarCash as the tool for "Hogares Latinoamericanos".
+4.  **Value Propositions (Slides 4-6)**: Focus on Multi-currency, Family roles, and the "Resumen Mensual".
+5.  **CTA (Final Slide)**: Direct to `hogarcash.app` with the tagline.
 
 ### 3. Navigation Script
 Ensure this snippet is at the end of the `<body>`:
