@@ -1,6 +1,4 @@
 const express = require('express');
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
 const path = require('path');
 const fs = require('fs-extra');
 const AdmZip = require('adm-zip');
@@ -23,81 +21,71 @@ const EXPORTS_DIR = isVercel
 fs.ensureDirSync(EXPORTS_DIR);
 
 /**
- * Launch Chromium (Vercel + local compatible)
+ * Launch Browser
  */
 async function launchBrowser() {
   if (isVercel) {
-    return await puppeteer.launch({
-      args: [
-        ...chromium.args,
-        '--no-sandbox',
-        '--disable-setuid-sandbox'
-      ],
+    const puppeteerCore = require('puppeteer-core');
+    const chromium = require('@sparticuz/chromium');
+    return await puppeteerCore.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: true,
-      defaultViewport: {
-        width: 1080,
-        height: 1440,
-        deviceScaleFactor: 2
-      }
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
     });
   }
 
-  // Local development
+  // Local development using full puppeteer
+  const puppeteer = require('puppeteer');
   return await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--force-color-profile=srgb'],
     defaultViewport: {
       width: 1080,
-      height: 1440,
+      height: 1080,
       deviceScaleFactor: 2
     }
   });
 }
 
 /**
- * Health check
- */
-app.get('/api/health', (req, res) => {
-  res.json({
-    ok: true,
-    environment: isVercel ? 'vercel' : 'local'
-  });
-});
-
-/**
- * Generate carousel images ZIP
+ * Generate carousel images
  */
 app.post('/api/generate', async (req, res) => {
   const { html } = req.body;
 
   if (!html) {
-    return res.status(400).json({
-      error: 'HTML is required'
-    });
+    return res.status(400).json({ error: 'HTML is required' });
   }
 
   const id = uuidv4();
   const folderPath = path.join(EXPORTS_DIR, id);
-
   await fs.ensureDir(folderPath);
 
   let browser;
-
   try {
     browser = await launchBrowser();
-
     const page = await browser.newPage();
 
-    await page.setContent(html, {
-      waitUntil: 'networkidle0'
+    await page.setViewport({
+      width: 1080,
+      height: 1080,
+      deviceScaleFactor: 2
     });
 
+    await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.evaluateHandle('document.fonts.ready');
 
     const slideCount = await page.evaluate(() => {
-      return document.querySelectorAll('.slide').length || 7;
+      return document.querySelectorAll('.slide').length;
     });
+
+    if (slideCount === 0) {
+        throw new Error('No elements with class "slide" found.');
+    }
+
+    const imagesBase64 = [];
 
     for (let i = 0; i < slideCount; i++) {
       await page.evaluate((index) => {
@@ -106,59 +94,45 @@ app.post('/api/generate', async (req, res) => {
         }
       }, i);
 
-      await new Promise(resolve => setTimeout(resolve, 700));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const element = await page.$('.viewport');
-
       if (!element) {
         throw new Error('Missing .viewport element in HTML');
       }
 
-      const imgPath = path.join(
-        folderPath,
-        `slide-${i + 1}.png`
-      );
-
-      await element.screenshot({
-        path: imgPath,
-        type: 'png'
+      const b64 = await element.screenshot({
+        type: 'png',
+        encoding: 'base64'
       });
+      imagesBase64.push(`data:image/png;base64,${b64}`);
+
+      const imgPath = path.join(folderPath, `slide-${i + 1}.png`);
+      await fs.writeFile(imgPath, b64, 'base64');
     }
 
     const zip = new AdmZip();
     zip.addLocalFolder(folderPath);
-
     const zipBuffer = zip.toBuffer();
 
-    res.set({
-      'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="carousel-${id}.zip"`,
-      'Content-Length': zipBuffer.length
+    res.json({
+        success: true,
+        images: imagesBase64,
+        zip: zipBuffer.toString('base64'),
+        slides: slideCount
     });
-
-    return res.send(zipBuffer);
 
   } catch (error) {
     console.error('Generate error:', error);
-
-    return res.status(500).json({
-      error: 'Failed to generate images: ' + error.message
-    });
-
+    res.status(500).json({ error: 'Failed to generate images: ' + error.message });
   } finally {
     if (browser) {
-      try {
-        await browser.close();
-      } catch (_) {}
+      try { await browser.close(); } catch (_) {}
     }
-
     await fs.remove(folderPath).catch(() => {});
   }
 });
 
-/**
- * Local only
- */
 if (!isVercel) {
   app.listen(PORT, () => {
     console.log(`🚀 Running at http://localhost:${PORT}`);

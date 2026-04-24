@@ -17,7 +17,7 @@ const fs = require('fs');
 
   // ─── 2. COPY SOURCE HTML ───
   // We assume 'hogarcash-export.html' is the source in the current directory
-  const sourceFileName = 'hogarcash-export.html';
+  const sourceFileName = 'carousel.html';
   const sourcePath = path.join(__dirname, sourceFileName);
   const destinationPath = path.join(folderPath, 'source.html');
 

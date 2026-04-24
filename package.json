@@ -2,6 +2,7 @@
   "name": "instagram-carousel-generator",
   "version": "1.0.0",
   "description": "Instagram carousel image generator",
+  "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
     "dev": "node --watch api/index.js"
@@ -12,6 +13,7 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "fs-extra": "^11.2.0",
+    "puppeteer": "^24.42.0",
     "puppeteer-core": "^24.15.0",
     "uuid": "^9.0.1"
   },

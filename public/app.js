@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const htmlInput = document.getElementById('htmlInput');
     const generateBtn = document.getElementById('generateBtn');
-    const resultCard = document.getElementById('resultCard');
+    const previewCard = document.getElementById('previewCard');
+    const previewGrid = document.getElementById('previewGrid');
     const downloadLink = document.getElementById('downloadLink');
-    const resultMsg = document.getElementById('resultMsg');
 
     generateBtn.addEventListener('click', async () => {
         const html = htmlInput.value.trim();
@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateBtn.classList.add('loading');
         generateBtn.disabled = true;
-        resultCard.classList.add('hidden');
+        previewCard.classList.add('hidden');
+        previewGrid.innerHTML = '';
 
         try {
             const response = await fetch('/api/generate', {
@@ -30,17 +31,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorData.error || 'Error en la generación');
             }
 
-            // Recibir el ZIP como blob
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            
-            // Configurar botón de descarga
-            downloadLink.href = url;
-            downloadLink.download = `carousel-${Date.now()}.zip`;
-            
-            resultMsg.textContent = `¡Éxito! Tu carrusel ha sido generado correctamente.`;
-            resultCard.classList.remove('hidden');
-            resultCard.scrollIntoView({ behavior: 'smooth' });
+            const data = await response.json();
+
+            if (data.success) {
+                // 1. Renderizar previsualizaciones
+                data.images.forEach((base64, index) => {
+                    const img = document.createElement('img');
+                    img.src = base64;
+                    img.alt = `Slide ${index + 1}`;
+                    img.title = `Slide ${index + 1} (2160x2160)`;
+                    previewGrid.appendChild(img);
+                });
+
+                // 2. Configurar descarga del ZIP (recibido como base64)
+                const binaryString = window.atob(data.zip);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'application/zip' });
+                const url = window.URL.createObjectURL(blob);
+                
+                downloadLink.href = url;
+                downloadLink.download = `carousel-${Date.now()}.zip`;
+                
+                previewCard.classList.remove('hidden');
+                previewCard.scrollIntoView({ behavior: 'smooth' });
+            }
 
         } catch (error) {
             console.error('Error:', error);
